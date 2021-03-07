@@ -1,0 +1,12 @@
+{
+    "C_Cpp.default.includePath": [
+        "%GTK_HOME%/include/gtk-2.0",
+        "%GTK_HOME%/lib/gtk-2.0/include",
+        "%GTK_HOME%/include/atk-1.0",
+        "%GTK_HOME%/include/cairo",
+        "%GTK_HOME%/include/pango-1.0",
+        "%GTK_HOME%/include/glib-2.0",
+        "%GTK_HOME%/lib/glib-2.0/include",
+        "%GTK_HOME%/include/libpng12"
+    ]
+}

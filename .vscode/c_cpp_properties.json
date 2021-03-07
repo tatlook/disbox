@@ -1,0 +1,35 @@
+{
+    "env": {
+        "GTK_HOME" : "D:/Gtk"
+    },
+    "configurations": [
+        {
+            "name": "Win32",
+            "includePath": [
+                "include",
+                "${GTK_HOME}/include/gtk-2.0",
+                "${GTK_HOME}/lib/gtk-2.0/include",
+                "${GTK_HOME}/include/atk-1.0",
+                "${GTK_HOME}/include/cairo",
+                "${GTK_HOME}/include/pango-1.0",
+                "${GTK_HOME}/include/glib-2.0",
+                "${GTK_HOME}/lib/glib-2.0/include",
+                "${GTK_HOME}/include/libpng12"
+            ]
+        }, 
+        {
+            "name": "Linux",
+            "includePath": [
+                "/include/gtk-2.0",
+                "/lib/gtk-2.0/include",
+                "/include/atk-1.0",
+                "/include/cairo",
+                "/include/pango-1.0",
+                "/include/glib-2.0",
+                "/lib/glib-2.0/include",
+                "/include/libpng12"
+            ]
+        }
+    ],
+    "version": 4
+}
