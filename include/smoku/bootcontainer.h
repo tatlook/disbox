@@ -5,6 +5,7 @@
 
 GtkWidget *create_chessboard();
 GtkWidget *create_menubar();
+void init_chessboard();
 
 extern GtkWidget *disui_window;
 
