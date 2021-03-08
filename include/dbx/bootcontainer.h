@@ -8,6 +8,7 @@ GtkWidget *create_menubar();
 void init_chessboard();
 
 extern GtkWidget *disui_window;
+extern GtkWidget *disui_main_panel;
 
 #define CHESSBOARD_LINE_SPACING 16
 #define CHESSBOARD_LINE_WIDTH 2.0

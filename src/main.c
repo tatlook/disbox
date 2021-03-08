@@ -1,7 +1,8 @@
 #include <gtk/gtk.h>
-#include <smoku/bootcontainer.h>
+#include <dbx/bootcontainer.h>
 
 GtkWidget *disui_window;
+GtkWidget *disui_main_panel;
 
 int main(int argc, char *argv[])
 {
@@ -15,7 +16,7 @@ int main(int argc, char *argv[])
     g_signal_connect(G_OBJECT(disui_window), "destroy",
         G_CALLBACK(gtk_main_quit), NULL);
 
-    GtkWidget *main_panel = gtk_vbox_new(FALSE, 2);
+    GtkWidget *main_panel = disui_main_panel = gtk_vbox_new(FALSE, 2);
     GtkWidget *chessboard = create_chessboard();
     GtkWidget *menubar = create_menubar();
 

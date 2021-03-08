@@ -7,11 +7,11 @@ INCLUDE = include
 
 CFLAGS-CONFIG = `pkg-config --cflags gtk+-2.0`
 LIBS-CONFIG = `pkg-config --libs gtk+-2.0`
-HEADER_RELY = include/smoku/*.h
+HEADER_RELY = include/dbx/*.h
 
-default : smoku.exe
+default : disbox.exe
 
-smoku.exe : $(OBJS)
+disbox.exe : $(OBJS)
 	gcc -o $@ $(OBJS) $(LIBS-CONFIG)
 
 %.o : %.c $(HEADER_RELY)
@@ -25,9 +25,9 @@ smoku.exe : $(OBJS)
 %.s : %.c $(HEADER_RELY)
 	gcc -S -I $(INCLUDE) $*.c -o $*.s $(CFLAGS-CONFIG)
 
-run : smoku.exe
-	./smoku
+run : disbox.exe
+	./disbox
 
 clean :
 	$(RM) src/*.o
-	$(RM) smoku.exe
+	$(RM) disbox.exe
