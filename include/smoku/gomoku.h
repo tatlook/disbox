@@ -1,16 +1,30 @@
-#if !defined(_SMOKU_DISBOX_H)
-#define _SMOKU_DISBOX_H
+#if !defined(_SMOKU_GOMOKU_H)
+#define _SMOKU_GOMOKU_H
 
-extern char disbox_x; /* 棋盘X轴数目 */
-extern char disbox_y; /* 棋盘Y轴数目 */
+#define GOMOKU_X 15 /* 棋盘X轴数目 */
+#define GOMOKU_Y 15 /* 棋盘Y轴数目 */
+#define GOMOKU_S (GOMOKU_X * GOMOKU_Y) /* 棋子数量 */
+/* 棋子坐标,C=棋子序列号 */
+#define GOMOKU_XY(C) \
+    (C / GOMOKU_Y), (C / GOMOKU_Y + 1), (C / GOMOKU_X), (C / GOMOKU_X + 1)
 
-#define DISBOX_D_X 5
-#define DISBOX_D_Y 5
-#define DISBOX_S (disbox_x * disbox_y) /* 方块数量 */
-#define DISBOX_D_S (DISBOX_D_X * DISBOX_D_Y) /* 方块数量 */
+/* 棋子状态枚举 */
+#define GOMOKU_HAVENT 0 /* 没有 */
+#define GOMOKU_WHITE 1 /* 黑子 */
+#define GOMOKU_BLACK 2 /* 白字 */
+typedef char gomoku_status_t; /* 类型 */
 
-extern GtkWidget *disbox_boxs[DISBOX_D_S];
+/* 棋该谁下 */
+extern enum gomoku_own_t {
+    GOOWN_USER, /* 该用户了 */
+    GOOWN_SMOKU /* 该程序了 */
+} gomoku_own;
 
-extern unsigned int color_number;
+/* 棋子map */
+extern gomoku_status_t gomoku_map[GOMOKU_X][GOMOKU_Y];
+extern gomoku_status_t *gomoku_mapp;
+extern GtkWidget *gomoku_pieces[GOMOKU_S];
 
-#endif // _SMOKU_DISBOX_H
+void calculation();
+
+#endif // _SMOKU_GOMOKU_H

@@ -1,138 +1,94 @@
 #include <smoku/bootcontainer.h>
 #include <smoku/gomoku.h>
 #include <smoku/debug.h>
-#include <stdbool.h>
-#include <string.h>
-#include <stdlib.h>
 
-GtkWidget *disbox_boxs[DISBOX_D_S];
-char disbox_colorno[DISBOX_D_S];
-static GdkColor disnohave_color = {0, 0xff00, 0xff0f, 0xfff0};
+/* 棋子点击事件处理函数 */
+static gboolean pieces_mouse_press(GtkWidget *piece, GdkEventButton *event, gomoku_status_t *status);
+/* 绘制空棋子回调函数 */
+static gboolean draw_chessboar_sub(GtkWidget *chessboard_sub, GdkEventExpose *event, gpointer data);
 
-char disbox_x = DISBOX_D_X;
-char disbox_y = DISBOX_D_Y;
-
-/* 最多颜色数 */
-#define COLOR_NUMBER_MAX 10
-/* 有几种颜色 */
-unsigned int color_number = COLOR_NUMBER_MAX / 3;
-
-/* 没有颜色的颜色号码 */
-#define DISBOX_HAVENT_COLOR 0
-/* 随机生成的颜色模板 */
-static GdkColor disbox_colors[COLOR_NUMBER_MAX];
-
-/* 当前盒子的数量 */
-static unsigned int disbox_count = 0;
-/* 移动次数 */
-static unsigned long disbox_move_count = 0;
-
-static gboolean win_dialog_close() {
-    init_chessboard();
-    return FALSE;
-}
-
-static void do_win() {
-    GtkWidget *dialog = gtk_message_dialog_new(
-        GTK_WINDOW(disui_window),
-        GTK_DIALOG_MODAL,
-        GTK_MESSAGE_INFO,
-        GTK_BUTTONS_OK,
-        "恭喜，您已胜利：\n"
-        "\t翻动次数：%d", disbox_move_count
-    );
-
-    gtk_widget_show_all(dialog);	/* 显示对话框和所有控件 */
-
-    g_signal_connect(G_OBJECT(dialog), "delete_event",
-        G_CALLBACK(win_dialog_close), NULL);
-}
-
-static gboolean mouse_moved(GtkWidget *box,
-                    GdkEvent  *event,
-                    char *color) {
-    /* 挪了一次 */
-    disbox_move_count++;
-    /* 此时没有颜色意味着数量即将增多。*/
-    if (*color == DISBOX_HAVENT_COLOR) {
-        disbox_count++;
-    }
-    /* 一般情况下颜色数直接加一就可以了，但... */
-    if (*color == color_number) {
-        /* ...到达最后时就又归零了。 */
-        *color = DISBOX_HAVENT_COLOR;
-    } else {
-        (*color) ++;
-    }
-    /* 此时没有颜色意味着数量减少。*/
-    if (*color == DISBOX_HAVENT_COLOR) {
-        disbox_count--;
-    }
-    /* 重新设定颜色 */
-    gtk_widget_modify_bg(box, GTK_STATE_NORMAL, &disbox_colors[(*color)]);
-    /* 全部颜色都没有了，就结束。 */
-    if (disbox_count == 0) {
-        do_win();
-    }
-    dbgprintf(":%d", disbox_count);
-    return TRUE;
-}
-
-void init_chessboard() {
-    /* 初始化游戏信息 */
-    disbox_count = 0;
-    disbox_move_count = 0;
-    /* 初始化没有颜色。 */
-    memcpy(&disbox_colors, &disnohave_color, sizeof(GdkColor));
-    /* 初始化其他颜色。 */
-    for (int i = 1; i < color_number; i++) {
-        static GdkColor color = (GdkColor) { .pixel = 0 };
-        color.red = rand() % 0xFFFF;
-        color.green = rand() % 0xFFFF;
-        color.blue = rand() % 0xFFFF;
-        /* 拷贝过去 */
-        memcpy(&disbox_colors[i], &color, sizeof(GdkColor));
-    }
-    
-    /* 初始化所有方块 */
-    for (int i = 0; i < DISBOX_S; i++) {
-        /* 随机颜色 */
-        char colorn = rand() % color_number;
-        disbox_colorno[i] = colorn;
-        if (colorn != DISBOX_HAVENT_COLOR) {
-            disbox_count++;
-        }
-        gtk_widget_modify_bg(disbox_boxs[i], GTK_STATE_NORMAL, &disbox_colors[colorn]);
-    }
-}
-
-static GtkWidget *chessboard;
+GtkWidget *gomoku_piece_black_image;
+GtkWidget *gomoku_piece_write_image;
 
 GtkWidget *create_chessboard() {
-    chessboard = gtk_table_new(disbox_x, disbox_y, TRUE);	// 表格布局
+    GtkWidget *chessboard = gtk_table_new(GOMOKU_X, GOMOKU_Y, TRUE);	// 表格布局
+     
     
-    /* 创建方块 */
-    for (int i = 0, go_x = 0, go_y = 0; i < DISBOX_S; i++, go_x++) {
+    /* 初始化所有棋子 */
+    for (int i = 0, go_x = 0, go_y = 0; i < GOMOKU_S; i++, go_x++) {
+        /* 捎带角初始化gomoku_map */
+        gomoku_mapp[i] = GOMOKU_HAVENT;
         /* 换行 */
-        if (go_x >= disbox_y) {
+        if (go_x >= GOMOKU_Y) {
             go_x = 0;
             go_y++;
         }
-        disbox_boxs[i] = gtk_button_new();
-        /* 方块放到表格上 */
+        /* 创建棋子 */
+        gomoku_pieces[i] = gtk_button_new();
+        /* 画棋子那的棋盘 */
+        g_signal_connect(gomoku_pieces[i],
+            "expose-event",
+            G_CALLBACK(draw_chessboar_sub),
+            NULL
+        );
+        /* 棋子放到表格上 */
         gtk_table_attach_defaults(
             GTK_TABLE(chessboard),
-            disbox_boxs[i],
+            gomoku_pieces[i],
             go_x, go_x + 1, go_y, go_y + 1
         );
-        g_signal_connect(
-            disbox_boxs[i],
-            "enter-notify-event",
-            G_CALLBACK(mouse_moved),
-            disbox_colorno + i
+        /* 给棋子注册点击事件处理程序 */
+        g_signal_connect(gomoku_pieces[i],
+            "button-press-event",
+            G_CALLBACK(pieces_mouse_press),
+            gomoku_mapp + i
         );
     }
-    /* 初始化所有方块 */
-    init_chessboard();
     return chessboard; /* 返回值用于加到窗口上 */
+}
+
+static gboolean pieces_mouse_press(GtkWidget *piece, GdkEventButton *event, gomoku_status_t *status) {
+    dbgputs("HHHHA1");
+    /* 不该用户下 */
+    if (gomoku_own == GOOWN_SMOKU) {
+        return TRUE;
+        dbgputs("HHHHA2");
+    }
+    dbgputs("HHHHA3");
+    /* 已经有子了 */
+// TODO: 直接注销事件处理程序
+    if (*status != GOMOKU_HAVENT) {
+        return TRUE;
+        dbgputs("HHHHA4");
+    }
+    /* 该程序下了 */
+    gomoku_own = GOOWN_SMOKU;
+
+    /* 给用户下白棋 */
+    *status = GOMOKU_WHITE;
+    /* 子落到上面去 */
+    gtk_button_set_image(GTK_BUTTON(piece), gomoku_piece_write_image);
+
+    calculation();
+    return TRUE;
+}
+
+static gboolean draw_chessboar_sub(GtkWidget *chessboard_sub, GdkEventExpose *event, gpointer data) {
+    cairo_t *cr = gdk_cairo_create(chessboard_sub->window);	// 创建cairo环境
+
+    cairo_set_source_rgb(cr, 0, 1, 1);
+    cairo_set_line_width(cr, CHESSBOARD_LINE_WIDTH);
+    
+    /* 画横线 */
+    cairo_move_to(cr, 0, CHESSBOARD_LINE_SPACING / 2);
+    cairo_line_to(cr, CHESSBOARD_LINE_SPACING, CHESSBOARD_LINE_SPACING / 2);
+
+    /* 画竖线 */
+    cairo_move_to(cr, CHESSBOARD_LINE_SPACING / 2, 0);
+    cairo_line_to(cr, CHESSBOARD_LINE_SPACING / 2, CHESSBOARD_LINE_SPACING);
+
+    cairo_paint(cr);
+
+    cairo_destroy(cr);	// 回收所有Cairo环境所占用的内存资源
+    return FALSE;
 }
