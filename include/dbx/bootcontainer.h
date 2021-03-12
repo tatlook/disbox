@@ -13,4 +13,6 @@ extern GtkWidget *disui_main_panel;
 #define CHESSBOARD_LINE_SPACING 16
 #define CHESSBOARD_LINE_WIDTH 2.0
 
+#define DISUI_ICON "./resource/disbox.ico"
+
 #endif // _SMOKU_BCOC_H

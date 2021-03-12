@@ -1,5 +1,6 @@
 # 目标文件
 src/*.o
+LICENSE.o
 
 # 调试时可能会生成
 src/*.i

@@ -4,6 +4,7 @@
 #include <stdbool.h>
 #include <string.h>
 #include <stdlib.h>
+#include <assert.h>
 
 GtkWidget *disbox_boxs[DISBOX_M_S];
 char disbox_colorno[DISBOX_M_S];
@@ -33,6 +34,9 @@ static gboolean win_dialog_close() {
 }
 
 static void do_win() {
+    static GtkWidget *win_image = NULL;
+    if (win_image == NULL)
+        win_image = gtk_image_new_from_file("./resource/win.png");
     GtkWidget *dialog = gtk_message_dialog_new(
         GTK_WINDOW(disui_window),
         GTK_DIALOG_MODAL,
@@ -41,6 +45,7 @@ static void do_win() {
         "恭喜，您已胜利：\n"
         "\t翻动次数：%d", disbox_move_count
     );
+    gtk_message_dialog_set_image(GTK_MESSAGE_DIALOG(dialog), win_image);
     gtk_widget_show_all(dialog);	/* 显示对话框和所有控件 */
 
     g_signal_connect(G_OBJECT(dialog), "delete_event",
@@ -77,6 +82,35 @@ static gboolean mouse_moved(GtkWidget *box,
     return TRUE;
 }
 
+static void fail_game(const char *why) {
+    static GtkWidget *fail_image = NULL;
+    if (fail_image == NULL)
+        fail_image = gtk_image_new_from_file("./resource/fail.png");
+    GtkWidget *dialog = gtk_message_dialog_new(
+        GTK_WINDOW(disui_window),
+        GTK_DIALOG_MODAL,
+        GTK_MESSAGE_INFO,
+        GTK_BUTTONS_CLOSE,
+        "非常抱歉，您输了。%s", why);
+    gtk_message_dialog_set_image(GTK_DIALOG(dialog), fail_image);
+    gtk_widget_show_all(dialog);
+}
+
+static gboolean after_a_second(gpointer data) {
+    static unsigned int count = 0;
+    count++;
+    g_print("-C:%d:C-", count);
+    if (count == DISBOX_FAIL_TIME_COUNT) {
+        fail_game("时间到");
+        return FALSE;
+    }
+    return TRUE;
+}
+
+static void set_timer() {
+    g_timeout_add(1000, after_a_second, NULL);
+}
+
 void init_chessboard() {
     /* 初始化游戏信息 */
     disbox_count = 0;
@@ -110,32 +144,40 @@ static GtkWidget *chessboard = NULL;
 static bool chess_first_init = true;
 
 GtkWidget *create_chessboard() {
-    /* 有可能是重新制作 *
-    if (!chess_first_init) {
-        gtk_container_remove(GTK_CONTAINER(disui_main_panel), chessboard);
-       // gtk_widget_destroy(chessboard);
-    }*/
-    chessboard = gtk_table_new(disbox_x, disbox_y, TRUE);	// 表格布局
-    /* 有可能是重新制作 *
-    if (!chess_first_init) {
-        gtk_container_add(GTK_CONTAINER(disui_main_panel), chessboard);
+    static char last_disbox_x;
+    static char last_disbox_y;
+    /* 第一次制作时需要初始化 */
+    if (chess_first_init) {
+        chessboard = gtk_table_new(disbox_x, disbox_y, TRUE);	// 表格布局
+        for (int i = 0; i < DISBOX_M_S; i++) {
+            disbox_boxs[i] = gtk_button_new();
+            g_signal_connect(
+                disbox_boxs[i],
+                "enter-notify-event",
+                G_CALLBACK(mouse_moved),
+                disbox_colorno + i
+            );
+        }
+        
+    } else {
+        /* 移除方块 */
+        for (int i = 0; i < last_disbox_x * last_disbox_y; i++) {
+            assert(disbox_boxs[i] != NULL);
+            /* 需要再添加一个引用，因为原先的引用会因为
+                gtk_container_remove而消失，导致对象销毁。 */
+            GtkWidget *c = g_object_ref(G_OBJECT(disbox_boxs[i]));
+            assert(c != NULL);
+            gtk_container_remove(GTK_CONTAINER(chessboard), c);
+        }
+        /* 重新制作时只需要重新设置 */
+        gtk_table_resize(GTK_TABLE(chessboard), disbox_x, disbox_y);
     }
 
-    /* 创建方块 */
-    if (chess_first_init) for (int i = 0; i < DISBOX_M_S; i++) {
-        disbox_boxs[i] = gtk_button_new();
-        g_signal_connect(
-            disbox_boxs[i],
-            "enter-notify-event",
-            G_CALLBACK(mouse_moved),
-            disbox_colorno + i
-        );
-    } else for (int i = 0; i < DISBOX_S; i++) {
-        gtk_container_remove(GTK_CONTAINER(chessboard), disbox_boxs[i]);
-    }
 
     /* 方块放到表格上 */
     for (int i = 0, go_x = 0, go_y = 0; i < DISBOX_S; i++, go_x++) {
+        assert(go_x <= disbox_x);
+        assert(go_y <= disbox_y);
         /* 换行 */
         if (go_x >= disbox_y) {
             go_x = 0;
@@ -151,5 +193,10 @@ GtkWidget *create_chessboard() {
     /* 初始化所有方块 */
     init_chessboard();
     chess_first_init = false;
+    last_disbox_x = disbox_x;
+    last_disbox_y = disbox_y;
+    
+    set_timer();
+
     return chessboard; /* 返回值用于加到窗口上 */
 }

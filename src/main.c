@@ -1,18 +1,25 @@
-#include <gtk/gtk.h>
 #include <dbx/bootcontainer.h>
+#include <gtk/gtk.h>
+#include <stdlib.h>
 
 GtkWidget *disui_window;
 GtkWidget *disui_main_panel;
 
 int main(int argc, char *argv[])
 {
+    /* 初始化随机数发生器 */
+    {
+        time_t t;
+        srand((unsigned) time(&t));
+    }
+
     gtk_init(&argc, &argv);
 
     disui_window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
 	gtk_window_set_title(GTK_WINDOW(disui_window), "消失方块"); // 设置窗口的标题
     gtk_window_set_default_size(GTK_WINDOW(disui_window), 600, 600);
     GError *gerrno;
-    gtk_window_set_default_icon_from_file("./resource/disbox.ico", &gerrno);
+    gtk_window_set_default_icon_from_file(DISUI_ICON, &gerrno);
     g_signal_connect(G_OBJECT(disui_window), "destroy",
         G_CALLBACK(gtk_main_quit), NULL);
 
