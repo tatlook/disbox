@@ -21,24 +21,14 @@ OBJS := $(patsubst %.c,%.o,$(OBJS))
 
 INCLUDE = include
 
-CFLAGS-CONFIG = `pkg-config --cflags gtk+-2.0`
+CFLAGS-CONFIG = `pkg-config --cflags gtk+-2.0` $$CFLAG
 LIBS-CONFIG = `pkg-config --libs gtk+-2.0`
 HEADER_RELY = include/dbx/*.h
 
-ifeq ($(LANG),)
-RM ?= rm -f
-else
-RM ?= -del
-endif
-
 default : disbox.exe
 
-# TODO: rely += resource/disbox.ico.o
 disbox.exe : $(OBJS)
 	gcc $^ -o $@ $(LIBS-CONFIG)
-
-resource/disbox.ico.o : resource/disbox.ico.rc resource/disbox.ico
-	windres -i $< -o $@
 
 %.o : %.c $(HEADER_RELY)
 	gcc -c -I $(INCLUDE) $*.c -o $*.o $(CFLAGS-CONFIG)
@@ -55,20 +45,19 @@ resource/disbox.ico.o : resource/disbox.ico.rc resource/disbox.ico
 run : disbox.exe
 	./disbox
 
-# TODO
-.PHONY : install
-install :
-	$(MAKE) $(OBJS)
-	gcc $^ -o disbox.exe $(LIBS-CONFIG)
-ifeq ($(LANG),)
-	cp disbox.exe /usr/bin
-	mkdir /usr/share/doc/disbox
-	cp LICENSE /usr/share/doc/disbox
-else
-	mkdir %ProgramFiles\disbox
-	copy disbox.exe %ProgramFiles%\disbox\ 
-	copy LICENSE %ProgramFiles%\disbox\ 
-endif
+.PHONY : release
+release :
+	export CFLAG="-DNDEBUG=1"
+	$(MAKE) clean
+	$(MAKE) disbox.exe
+	@if [ ! -d release ]; then \
+		echo mkdir release; \
+		mkdir release; \
+	fi
+	cp disbox.exe release
+	cp -r resource release
+	cp LICENSE release
+	cp README.md release
 
 .PHONY : clean
 clean :

@@ -26,6 +26,7 @@ void init_chessboard();
 
 extern GtkWidget *disui_window;
 extern GtkWidget *disui_main_panel;
+extern GtkWidget *disui_tm_lable;
 
 #define CHESSBOARD_LINE_SPACING 16
 #define CHESSBOARD_LINE_WIDTH 2.0

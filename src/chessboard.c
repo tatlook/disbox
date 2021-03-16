@@ -45,7 +45,7 @@ static unsigned int disbox_count = 0;
 /* 移动次数 */
 static unsigned long disbox_move_count = 0;
 
-static gboolean win_dialog_close() {
+static gboolean win_fail_dialog_close() {
     init_chessboard();
     return FALSE;
 }
@@ -66,7 +66,7 @@ static void do_win() {
     gtk_widget_show_all(dialog);	/* 显示对话框和所有控件 */
 
     g_signal_connect(G_OBJECT(dialog), "delete_event",
-        G_CALLBACK(win_dialog_close), NULL);
+        G_CALLBACK(win_fail_dialog_close), NULL);
 }
 
 static gboolean mouse_moved(GtkWidget *box,
@@ -108,16 +108,22 @@ static void fail_game(const char *why) {
         GTK_DIALOG_MODAL,
         GTK_MESSAGE_INFO,
         GTK_BUTTONS_CLOSE,
-        "非常抱歉，您输了。%s", why);
-    gtk_message_dialog_set_image(GTK_DIALOG(dialog), fail_image);
+        "非常抱歉，您输了。%s\n"
+        "\t还剩%d个方块\n"
+        "\t移动了%d次",
+        why, disbox_count, disbox_move_count);
+    gtk_message_dialog_set_image(GTK_MESSAGE_DIALOG(dialog), fail_image);
     gtk_widget_show_all(dialog);
+    g_signal_connect(G_OBJECT(dialog), "delete_event",
+        G_CALLBACK(win_fail_dialog_close), NULL);
 }
 
 static gboolean after_a_second(gpointer data) {
-    static unsigned int count = 0;
-    count++;
-    g_print("-C:%d:C-", count);
-    if (count == DISBOX_FAIL_TIME_COUNT) {
+    disbox_tm_count++;
+    dbgprintf("-C:%d:C-", disbox_tm_count);
+    char s[32];
+    gtk_label_set_label(GTK_LABEL(disui_tm_lable), itoa(disbox_tm_count, s, 10));
+    if (disbox_tm_count == DISBOX_FAIL_TIME_COUNT) {
         fail_game("时间到");
         return FALSE;
     }
@@ -125,7 +131,14 @@ static gboolean after_a_second(gpointer data) {
 }
 
 static void set_timer() {
-    g_timeout_add(1000, after_a_second, NULL);
+    disbox_tm_count = 0;
+    static bool
+        timeout_set = false; /* 防止同时有多个定时器 */
+    if (timeout_set == false) {
+        timeout_set = true;
+        gtk_label_set_label(GTK_LABEL(disui_tm_lable), "--");
+        g_timeout_add(1000, after_a_second, NULL);
+    }
 }
 
 void init_chessboard() {
@@ -154,6 +167,8 @@ void init_chessboard() {
         }
         gtk_widget_modify_bg(disbox_boxs[i], GTK_STATE_NORMAL, &disbox_colors[colorn]);
     }
+       
+    set_timer();
 }
 
 
@@ -212,8 +227,6 @@ GtkWidget *create_chessboard() {
     chess_first_init = false;
     last_disbox_x = disbox_x;
     last_disbox_y = disbox_y;
-    
-    set_timer();
 
     return chessboard; /* 返回值用于加到窗口上 */
 }

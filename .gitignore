@@ -1,6 +1,5 @@
 # 目标文件
 src/*.o
-LICENSE.o
 
 # 调试时可能会生成
 src/*.i
@@ -8,3 +7,4 @@ src/*.s
 
 # 最终目标
 disbox.exe
+release

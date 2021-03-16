@@ -20,6 +20,7 @@
 #include <sys/stat.h>
 #include <stdlib.h>
 #include <assert.h>
+#include <stdio.h>
 
 static void show_rule();
 static void show_license();
@@ -33,9 +34,7 @@ setdiff(2, _3)
 setdiff(1, _4)
 #undef setdiff
 #define setdiff(N, N2) static void set_big##N2() { \
-    disbox_x = N * 5; \
-    disbox_y = N * 5; \
-    printf("HHHHHA%d$$", N * 5);\
+    disbox_x = disbox_y = N * 5; \
     create_chessboard(); \
 }
 setdiff(4, _1)
@@ -72,14 +71,14 @@ GtkWidget *create_menubar() {
     GtkWidget *colorful_4_mi = gtk_radio_menu_item_new_with_label(
         gtk_radio_menu_item_group(GTK_RADIO_MENU_ITEM(colorful_3_mi)),
         "色彩单凋");
-    GtkWidget *big_3_mi = gtk_radio_menu_item_new_with_label(NULL, "中等");
-    GtkWidget *big_1_mi = gtk_radio_menu_item_new_with_label(
-        gtk_radio_menu_item_group(GTK_RADIO_MENU_ITEM(big_3_mi)), "巨大");
+    GtkWidget *big_1_mi = gtk_radio_menu_item_new_with_label(NULL, "巨大");
+    GtkWidget *big_3_mi = gtk_radio_menu_item_new_with_label(
+        gtk_radio_menu_item_group(GTK_RADIO_MENU_ITEM(big_1_mi)), "中等");
     GtkWidget *big_2_mi = gtk_radio_menu_item_new_with_label(
-        gtk_radio_menu_item_group(GTK_RADIO_MENU_ITEM(big_3_mi)),
+        gtk_radio_menu_item_group(GTK_RADIO_MENU_ITEM(big_1_mi)),
         "较大");
     GtkWidget *big_4_mi = gtk_radio_menu_item_new_with_label(
-        gtk_radio_menu_item_group(GTK_RADIO_MENU_ITEM(big_3_mi)),
+        gtk_radio_menu_item_group(GTK_RADIO_MENU_ITEM(big_1_mi)),
         "小");
 
     gtk_menu_item_set_submenu(GTK_MENU_ITEM(file_ml), file_menu);
@@ -148,12 +147,6 @@ static void show_rule() {
         "每次鼠标进入方格区域后，方格的颜色会改变一次。"
         "当所有方格的颜色都是白色时，游戏结束。"
     );
-//    GtkWidget *d = gtk_dialog_new_with_buttons(
-  ////      "游戏规则",
-    //    GTK_WINDOW(disui_window),
-    ///    NULL,
-     //   "关闭"
-    //);
     gtk_widget_show_all(dialog);	/* 显示对话框和所有控件 */
 }
 
@@ -164,14 +157,22 @@ static void show_license() {
     static const gchar *authors[] = {
         "Tatlook"
     };
-    gchar *dislice;
-    {
+
+    static gchar *dislice = NULL;
+    /* 只需要加载一次 */
+    if (dislice == NULL) {
         struct stat st;
-        stat("LICENSE", &st);
-        dislice = malloc(st.st_size);
-        FILE *f = fopen("LICENSE", "r");
-        fread(dislice, st.st_size, 1, f);
-        fclose(f);
+        int ret = stat("LICENSE", &st);
+        /* LICENSE文件不见了 */
+        if (ret) {
+            dislice = "本地协议加载错误，请查看在线版本：https://www.gnu.org/licenses/gpl-3.0.txt";
+        /* 还在就读入 */
+        } else {
+            dislice = malloc(st.st_size);
+            FILE *f = fopen("LICENSE", "r");
+            fread(dislice, st.st_size, 1, f);
+            fclose(f);
+        }
     }
 
     assert(dislice != NULL);

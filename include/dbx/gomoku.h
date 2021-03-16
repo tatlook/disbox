@@ -22,12 +22,14 @@ extern char disbox_x; /* 棋盘X轴数目 */
 extern char disbox_y; /* 棋盘Y轴数目 */
 #define DISBOX_M_X 20 /* 方块最大列数 */
 #define DISBOX_M_Y 20 /* 方块最大行数 */
-#define DISBOX_D_X 10 /* 方块默认列数 */
-#define DISBOX_D_Y 10 /* 方块默认行数 */
+#define DISBOX_D_X 20 /* 方块默认列数 */
+#define DISBOX_D_Y 20 /* 方块默认行数 */
 #define DISBOX_S (disbox_x * disbox_y) /* 方块数量 */
 #define DISBOX_M_S (DISBOX_M_X * DISBOX_M_Y) /* 方块最大数量 */
 #define DISBOX_D_S (DISBOX_D_X * DISBOX_D_Y) /* 方块默认数量 */
 #define DISBOX_FAIL_TIME_COUNT 100 /* 输掉的时间（秒） */
+
+extern int disbox_tm_count;
 
 extern GtkWidget *disbox_boxs[DISBOX_M_S];
 
