@@ -16,7 +16,6 @@
  */
 
 #include <dbx/bootcontainer.h>
-#include <gtk/gtk.h>
 #include <stdlib.h>
 #include <unistd.h>
 

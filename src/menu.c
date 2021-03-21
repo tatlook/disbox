@@ -15,6 +15,10 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+#include <gtk/gtkseparatormenuitem.h>
+#include <gtk/gtkradiomenuitem.h>
+#include <gtk/gtkcheckmenuitem.h>
+#include <gtk/gtkmenubar.h>
 #include <dbx/bootcontainer.h>
 #include <dbx/gomoku.h>
 #include <sys/stat.h>
@@ -24,6 +28,10 @@
 
 static void show_rule();
 static void show_license();
+static void function_change(GtkCheckMenuItem *checkmenuitem, bool *chageable) {
+    *chageable = !(*chageable);
+    init_chessboard();
+}
 #define setdiff(N, N2) static void set_colorful##N2() { \
     color_number = N * 2; \
     init_chessboard(); \
@@ -54,12 +62,12 @@ GtkWidget *create_menubar() {
     GtkWidget *game_ml = gtk_menu_item_new_with_mnemonic("游戏(_G)");
     GtkWidget *help_ml = gtk_menu_item_new_with_mnemonic("帮助(_H)");
 
-    GtkWidget *quit_mi = gtk_menu_item_new_with_mnemonic("退出\t\t(_E)");
+    GtkWidget *quit_mi = gtk_menu_item_new_with_mnemonic("退出\t\t\t(_E)");
 
-    GtkWidget *restart_mi = gtk_menu_item_new_with_mnemonic("重新开始\t(_R)");
+    GtkWidget *restart_mi = gtk_menu_item_new_with_mnemonic("重新开始\t\t(_R)");
 
-    GtkWidget *rule_mi = gtk_menu_item_new_with_mnemonic("查看规则\t(_R)");
-    GtkWidget *about_mi = gtk_menu_item_new_with_mnemonic("关于\t\t(_A)");
+    GtkWidget *rule_mi = gtk_menu_item_new_with_mnemonic("查看规则\t\t(_R)");
+    GtkWidget *about_mi = gtk_menu_item_new_with_mnemonic("关于\t\t\t(_A)");
 
     GtkWidget *colorful_3_mi = gtk_radio_menu_item_new_with_label(NULL, "中等");
     GtkWidget *colorful_1_mi = gtk_radio_menu_item_new_with_label(
@@ -81,6 +89,12 @@ GtkWidget *create_menubar() {
         gtk_radio_menu_item_group(GTK_RADIO_MENU_ITEM(big_1_mi)),
         "小");
 
+    GtkWidget *f_chout_mi = gtk_check_menu_item_new_with_label("离开区域即变色");
+    GtkWidget *f_chin_mi = gtk_check_menu_item_new_with_label("进入区域即变色");
+    gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(f_chin_mi), TRUE);
+    GtkWidget *f_attimeout_mi = gtk_check_menu_item_new_with_label("计算停留时间");
+    GtkWidget *f_nooutside_mi = gtk_check_menu_item_new_with_label("不允许光标离开窗口");
+
     gtk_menu_item_set_submenu(GTK_MENU_ITEM(file_ml), file_menu);
     gtk_menu_item_set_submenu(GTK_MENU_ITEM(game_ml), game_menu);
     gtk_menu_item_set_submenu(GTK_MENU_ITEM(help_ml), help_menu);
@@ -98,6 +112,11 @@ GtkWidget *create_menubar() {
     gtk_menu_shell_append(GTK_MENU_SHELL(game_menu), big_2_mi);
     gtk_menu_shell_append(GTK_MENU_SHELL(game_menu), big_3_mi);
     gtk_menu_shell_append(GTK_MENU_SHELL(game_menu), big_4_mi);
+    gtk_menu_shell_append(GTK_MENU_SHELL(game_menu), gtk_separator_menu_item_new());
+    gtk_menu_shell_append(GTK_MENU_SHELL(game_menu), f_chout_mi);
+    gtk_menu_shell_append(GTK_MENU_SHELL(game_menu), f_chin_mi);
+    gtk_menu_shell_append(GTK_MENU_SHELL(game_menu), f_attimeout_mi);
+    gtk_menu_shell_append(GTK_MENU_SHELL(game_menu), f_nooutside_mi);
 
     gtk_menu_shell_append(GTK_MENU_SHELL(help_menu), rule_mi);
     gtk_menu_shell_append(GTK_MENU_SHELL(help_menu), about_mi);
@@ -118,6 +137,13 @@ GtkWidget *create_menubar() {
     g_signal_connect(G_OBJECT(about_mi), "activate",
         G_CALLBACK(show_license), NULL);
 
+#define df(M, P) g_signal_connect(G_OBJECT(M), "activate",\
+        G_CALLBACK(function_change), &P)
+    df(f_chout_mi, disbox_out_change);
+    df(f_chin_mi, disbox_in_change);
+    df(f_attimeout_mi, disbox_fail_longtime_at_box);
+    df(f_nooutside_mi, disbox_no_outside);
+#undef df
     
 #define gsdf(N) g_signal_connect(G_OBJECT(colorful##N##_mi), "toggled",\
         G_CALLBACK(set_colorful##N), NULL)
@@ -138,6 +164,9 @@ GtkWidget *create_menubar() {
     return menubar;
 }
 
+
+#include <gtk/gtkmessagedialog.h>
+
 static void show_rule() {
     GtkWidget *dialog = gtk_message_dialog_new(
         GTK_WINDOW(disui_window),
@@ -150,11 +179,12 @@ static void show_rule() {
     gtk_widget_show_all(dialog);	/* 显示对话框和所有控件 */
 }
 
+#include <gtk/gtkaboutdialog.h>
 
 static void show_license() {
     GtkWidget *dialog = gtk_about_dialog_new();
     
-    static const gchar *authors[] = {
+    static const gchar *authors[3] = {
         "Tatlook"
     };
 

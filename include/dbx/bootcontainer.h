@@ -18,7 +18,13 @@
 #if !defined(_SMOKU_BCOC_H)
 #define _SMOKU_BCOC_H
 
-#include <gtk/gtk.h>
+#include <gtk/gtkwindow.h>
+#include <gtk/gtkbutton.h>
+#include <gtk/gtklabel.h>
+#include <gtk/gtkvbox.h>
+#include <gtk/gtkhbox.h>
+#include <gtk/gtkmain.h>
+#include <glib-object.h>
 
 GtkWidget *create_chessboard();
 GtkWidget *create_menubar();

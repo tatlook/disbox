@@ -15,6 +15,8 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+#include <gtk/gtkmessagedialog.h>
+#include <gtk/gtktable.h>
 #include <dbx/bootcontainer.h>
 #include <dbx/gomoku.h>
 #include <dbx/debug.h>
@@ -23,8 +25,19 @@
 #include <stdlib.h>
 #include <assert.h>
 
+/* 出去也变色 */
+bool disbox_out_change = false;
+/* 进入即变色 */
+bool disbox_in_change = true;
+/* 在箱子上停留时间过长就输 */
+bool disbox_fail_longtime_at_box = false;
+/* 不允许光标离开窗口 */
+bool disbox_no_outside = false;
+
 GtkWidget *disbox_boxs[DISBOX_M_S];
-char disbox_colorno[DISBOX_M_S];
+typedef char colorno_t;
+colorno_t disbox_colorno[DISBOX_M_S];
+/* “白色”，即没有 */
 static GdkColor disnohave_color = {0, 0xff00, 0xff0f, 0xfff0};
 
 char disbox_x = DISBOX_D_X;
@@ -45,15 +58,20 @@ static unsigned int disbox_count = 0;
 /* 移动次数 */
 static unsigned long disbox_move_count = 0;
 
-static gboolean win_fail_dialog_close() {
+/* 在一个盒子上停留的时间（毫秒）超过此数判负 */
+#define DISBOX_IN_ONE_TIME_MAX 5000
+/* 移动次数超过此数判负 */
+#define DISBOX_MOVE_MAX 1500
+
+static gboolean win_fail_dialog_close(GtkWidget *widget,
+               GdkEvent  *event,
+               gpointer   user_data) {
     init_chessboard();
     return FALSE;
 }
 
 static void do_win() {
-    static GtkWidget *win_image = NULL;
-    if (win_image == NULL)
-        win_image = gtk_image_new_from_file("./resource/win.png");
+    GtkWidget *win_image = gtk_image_new_from_file("./resource/win.png");
     GtkWidget *dialog = gtk_message_dialog_new(
         GTK_WINDOW(disui_window),
         GTK_DIALOG_MODAL,
@@ -69,40 +87,8 @@ static void do_win() {
         G_CALLBACK(win_fail_dialog_close), NULL);
 }
 
-static gboolean mouse_moved(GtkWidget *box,
-                    GdkEvent  *event,
-                    char *color) {
-    /* 挪了一次 */
-    disbox_move_count++;
-    /* 此时没有颜色意味着数量即将增多。*/
-    if (*color == DISBOX_HAVENT_COLOR) {
-        disbox_count++;
-    }
-    /* 一般情况下颜色数直接加一就可以了，但... */
-    if (*color == color_number) {
-        /* ...到达最后时就又归零了。 */
-        *color = DISBOX_HAVENT_COLOR;
-    } else {
-        (*color) ++;
-    }
-    /* 此时没有颜色意味着数量减少。*/
-    if (*color == DISBOX_HAVENT_COLOR) {
-        disbox_count--;
-    }
-    /* 重新设定颜色 */
-    gtk_widget_modify_bg(box, GTK_STATE_NORMAL, &disbox_colors[(*color)]);
-    /* 全部颜色都没有了，就结束。 */
-    if (disbox_count == 0) {
-        do_win();
-    }
-    dbgprintf(":%d", disbox_count);
-    return TRUE;
-}
-
 static void fail_game(const char *why) {
-    static GtkWidget *fail_image = NULL;
-    if (fail_image == NULL)
-        fail_image = gtk_image_new_from_file("./resource/fail.png");
+    GtkWidget *fail_image = gtk_image_new_from_file("./resource/fail.png");
     GtkWidget *dialog = gtk_message_dialog_new(
         GTK_WINDOW(disui_window),
         GTK_DIALOG_MODAL,
@@ -116,6 +102,59 @@ static void fail_game(const char *why) {
     gtk_widget_show_all(dialog);
     g_signal_connect(G_OBJECT(dialog), "delete_event",
         G_CALLBACK(win_fail_dialog_close), NULL);
+}
+
+static gboolean fail_game_because_timeout(gpointer data) {
+    fail_game("在同一方块上停留了太多时间。");
+    return FALSE;
+}
+
+static gboolean change_color(GtkWidget *box,
+                    GdkEvent  *event,
+                    colorno_t *color) {
+    /* 只用计一次，即只计进入，不计离开。 */
+    if (event->type == GDK_ENTER_NOTIFY) {
+        /* 挪了一次 */
+        disbox_move_count++;
+        /* 对停留时长的功能进行处理 */
+        if (disbox_fail_longtime_at_box) {
+            /* 计时器tag */
+            static guint timeout_tag = 0;
+            if (timeout_tag != 0) {
+                /* 在重新设置之前取消之前的定时器 */
+                g_source_remove(timeout_tag);
+            }
+            /* 初始化/重新设置定时器 */
+            timeout_tag = g_timeout_add(DISBOX_IN_ONE_TIME_MAX, fail_game_because_timeout, NULL);
+        }
+    }
+    /* 移动次数太多就判负 */
+    if (disbox_move_count > DISBOX_MOVE_MAX) {
+        fail_game("移动次数太多了。");
+    }
+    /* 此时没有颜色意味着没有颜色的数量即将增多。*/
+    if (*color == DISBOX_HAVENT_COLOR) {
+        disbox_count++;
+    }
+    /* 一般情况下颜色数直接加一就可以了，但... */
+    if (*color == color_number) {
+        /* ...到达最后时就又归零了。 */
+        *color = DISBOX_HAVENT_COLOR;
+    } else {
+        (*color) ++;
+    }
+    /* 此时没有颜色意味着没有颜色的数量减少。*/
+    if (*color == DISBOX_HAVENT_COLOR) {
+        disbox_count--;
+    }
+    /* 重新设定颜色 */
+    gtk_widget_modify_bg(box, GTK_STATE_NORMAL, &disbox_colors[(*color)]);
+    /* 全部颜色都没有了，就结束。 */
+    if (disbox_count == 0) {
+        do_win();
+    }
+    dbgprintf(":%d", disbox_count);
+    return TRUE;
 }
 
 static gboolean after_a_second(gpointer data) {
@@ -132,11 +171,10 @@ static gboolean after_a_second(gpointer data) {
 
 static void set_timer() {
     disbox_tm_count = 0;
-    static bool
-        timeout_set = false; /* 防止同时有多个定时器 */
+    gtk_label_set_label(GTK_LABEL(disui_tm_lable), "--");
+    static bool timeout_set = false; /* 防止同时有多个定时器 */
     if (timeout_set == false) {
         timeout_set = true;
-        gtk_label_set_label(GTK_LABEL(disui_tm_lable), "--");
         g_timeout_add(1000, after_a_second, NULL);
     }
 }
@@ -166,8 +204,47 @@ void init_chessboard() {
             disbox_count++;
         }
         gtk_widget_modify_bg(disbox_boxs[i], GTK_STATE_NORMAL, &disbox_colors[colorn]);
+
+        /* 功能可能会撤销，所以先取消事件。 */
+        g_signal_handlers_destroy(disbox_boxs[i]);
+        /* 根据各种功能添加事件 */
+        if (disbox_in_change) {
+            g_signal_connect(
+                disbox_boxs[i],
+                "enter-notify-event",
+                G_CALLBACK(change_color),
+                disbox_colorno + i
+            );
+        }
+        if (disbox_out_change) {
+            g_signal_connect(
+                disbox_boxs[i],
+                "leave-notify-event",
+                G_CALLBACK(change_color),
+                disbox_colorno + i
+            );
+        }
     }
-       
+
+
+/*
+TODO: 添加窗口不可离开功能
+    /* 根据各种功能给其他组件添加事件 /
+    g_signal_handlers_destroy(disui_main_panel);
+    if (disbox_no_outside) {
+        g_signal_connect(
+            disui_main_panel,
+            "leave-notify-event",
+            G_CALLBACK(fail_game_because_out_window),
+            NULL
+        );
+    }
+static gboolean fail_game_because_out_window(GtkWidget *widget,
+                    GdkEvent  *event,
+                    gpointer data) {
+    fail_game("鼠标不可以离开棋盘，您可以在菜单中设置。");
+    return TRUE;
+}*/
     set_timer();
 }
 
@@ -183,14 +260,7 @@ GtkWidget *create_chessboard() {
         chessboard = gtk_table_new(disbox_x, disbox_y, TRUE);	// 表格布局
         for (int i = 0; i < DISBOX_M_S; i++) {
             disbox_boxs[i] = gtk_button_new();
-            g_signal_connect(
-                disbox_boxs[i],
-                "enter-notify-event",
-                G_CALLBACK(mouse_moved),
-                disbox_colorno + i
-            );
         }
-        
     } else {
         /* 移除方块 */
         for (int i = 0; i < last_disbox_x * last_disbox_y; i++) {
