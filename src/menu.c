@@ -94,6 +94,7 @@ GtkWidget *create_menubar() {
     gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(f_chin_mi), TRUE);
     GtkWidget *f_attimeout_mi = gtk_check_menu_item_new_with_label("计算停留时间");
     GtkWidget *f_nooutside_mi = gtk_check_menu_item_new_with_label("不允许光标离开窗口");
+    gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(f_nooutside_mi), TRUE);
 
     gtk_menu_item_set_submenu(GTK_MENU_ITEM(file_ml), file_menu);
     gtk_menu_item_set_submenu(GTK_MENU_ITEM(game_ml), game_menu);

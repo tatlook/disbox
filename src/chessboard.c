@@ -21,6 +21,7 @@
 #include <dbx/gomoku.h>
 #include <dbx/debug.h>
 #include <stdbool.h>
+#include <unistd.h>
 #include <string.h>
 #include <stdlib.h>
 #include <assert.h>
@@ -32,7 +33,7 @@ bool disbox_in_change = true;
 /* 在箱子上停留时间过长就输 */
 bool disbox_fail_longtime_at_box = false;
 /* 不允许光标离开窗口 */
-bool disbox_no_outside = false;
+bool disbox_no_outside = true;
 
 GtkWidget *disbox_boxs[DISBOX_M_S];
 typedef char colorno_t;
@@ -179,6 +180,30 @@ static void set_timer() {
     }
 }
 
+static gboolean fail_game_because_out_window(gpointer data) {
+    fail_game("鼠标离开了棋盘。");
+    return FALSE;
+}
+
+static gboolean out_window(GtkWidget *widget,
+                    GdkEvent  *event,
+                    gpointer data) {
+    /* 当鼠标移出“窗口”时，有可能只是去菜单
+        ——棋盘与菜单中间的缝隙也算“窗口”的一部分 */
+    for (int i = 0; i < DISBOX_S; i++) {
+        /* 把之前添加的麻烦的回调函数去掉 */
+        g_signal_handlers_destroy(disbox_boxs[i]);
+        /* 进入就输信号 */
+        g_signal_connect(
+            disbox_boxs[i],
+            "enter-notify-event",
+            G_CALLBACK(fail_game_because_out_window),
+            disbox_colorno + i
+        );
+    }
+    return TRUE;
+}
+
 void init_chessboard() {
     /* 初始化游戏信息 */
     disbox_count = 0;
@@ -225,26 +250,18 @@ void init_chessboard() {
             );
         }
     }
+    dbgprintf("...in:%iout:%i...", disbox_in_change, disbox_out_change);
 
-
-/*
-TODO: 添加窗口不可离开功能
-    /* 根据各种功能给其他组件添加事件 /
+    /* 根据各种功能给其他组件添加事件 */
     g_signal_handlers_destroy(disui_main_panel);
     if (disbox_no_outside) {
         g_signal_connect(
-            disui_main_panel,
+            disui_window,
             "leave-notify-event",
-            G_CALLBACK(fail_game_because_out_window),
+            G_CALLBACK(out_window),
             NULL
         );
     }
-static gboolean fail_game_because_out_window(GtkWidget *widget,
-                    GdkEvent  *event,
-                    gpointer data) {
-    fail_game("鼠标不可以离开棋盘，您可以在菜单中设置。");
-    return TRUE;
-}*/
     set_timer();
 }
 
