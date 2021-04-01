@@ -49,4 +49,8 @@ extern bool disbox_fail_longtime_at_box;
 /* 不允许光标离开窗口 */
 extern bool disbox_no_outside;
 
+/* 游戏暂停 */
+void game_halt();
+void game_unhalt();
+
 #endif // _SMOKU_DISBOX_H

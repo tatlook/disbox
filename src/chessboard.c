@@ -59,19 +59,66 @@ static unsigned int disbox_count = 0;
 /* 移动次数 */
 static unsigned long disbox_move_count = 0;
 
+/* 有没有暂停 */
+static bool disbox_halting = false;
+
 /* 在一个盒子上停留的时间（毫秒）超过此数判负 */
 #define DISBOX_IN_ONE_TIME_MAX 5000
 /* 移动次数超过此数判负 */
 #define DISBOX_MOVE_MAX 1500
 
+/* 盒子的计时器tag（参看disbox_fail_longtime_at_box） */
+static guint disbox_box_timeout_tag = 0;
+
+static gboolean change_color(GtkWidget *box,
+                    GdkEvent  *event,
+                    colorno_t *color);
+static gboolean out_window(GtkWidget *widget,
+                    GdkEvent  *event,
+                    gpointer data);
+static gboolean fail_game_because_timeout(gpointer data);
+
+void game_halt() {
+    disbox_halting = true;
+    if (disbox_no_outside) {
+        g_signal_handlers_block_by_func(disui_window, (gpointer) out_window, 0);
+    }
+    if (disbox_fail_longtime_at_box) {
+        g_source_remove(disbox_box_timeout_tag);
+    }
+    if (disbox_in_change || disbox_out_change) {
+        for (int i = 0; i < DISBOX_S; i++) {
+            g_signal_handlers_block_by_func(disbox_boxs[i], (gpointer) change_color, 0);
+        }
+    }
+}
+
+void game_unhalt() {
+    disbox_halting = false;
+    if (disbox_no_outside) {
+        g_signal_handlers_unblock_by_func(disui_window, (gpointer) out_window, 0);
+    }
+    if (disbox_fail_longtime_at_box) {
+        /* 重新设置定时器 */
+        disbox_box_timeout_tag = g_timeout_add(DISBOX_IN_ONE_TIME_MAX, fail_game_because_timeout, NULL);
+    }
+    if (disbox_in_change || disbox_out_change) {
+        for (int i = 0; i < DISBOX_S; i++) {
+            g_signal_handlers_unblock_by_func(disbox_boxs[i], (gpointer) change_color, 0);
+        }
+    }
+}
+
 static gboolean win_fail_dialog_close(GtkWidget *widget,
                GdkEvent  *event,
                gpointer   user_data) {
+    game_unhalt();
     init_chessboard();
     return FALSE;
 }
 
 static void do_win() {
+    game_halt();
     GtkWidget *win_image = gtk_image_new_from_file("./resource/win.png");
     GtkWidget *dialog = gtk_message_dialog_new(
         GTK_WINDOW(disui_window),
@@ -89,6 +136,7 @@ static void do_win() {
 }
 
 static void fail_game(const char *why) {
+    game_halt();
     GtkWidget *fail_image = gtk_image_new_from_file("./resource/fail.png");
     GtkWidget *dialog = gtk_message_dialog_new(
         GTK_WINDOW(disui_window),
@@ -119,14 +167,12 @@ static gboolean change_color(GtkWidget *box,
         disbox_move_count++;
         /* 对停留时长的功能进行处理 */
         if (disbox_fail_longtime_at_box) {
-            /* 计时器tag */
-            static guint timeout_tag = 0;
-            if (timeout_tag != 0) {
+            if (disbox_box_timeout_tag != 0) {
                 /* 在重新设置之前取消之前的定时器 */
-                g_source_remove(timeout_tag);
+                g_source_remove(disbox_box_timeout_tag);
             }
             /* 初始化/重新设置定时器 */
-            timeout_tag = g_timeout_add(DISBOX_IN_ONE_TIME_MAX, fail_game_because_timeout, NULL);
+            disbox_box_timeout_tag = g_timeout_add(DISBOX_IN_ONE_TIME_MAX, fail_game_because_timeout, NULL);
         }
     }
     /* 移动次数太多就判负 */
@@ -159,6 +205,10 @@ static gboolean change_color(GtkWidget *box,
 }
 
 static gboolean after_a_second(gpointer data) {
+    /* 游戏暂停时什么也不用做 */
+    if (disbox_halting) {
+        return TRUE;
+    }
     disbox_tm_count++;
     dbgprintf("-C:%d:C-", disbox_tm_count);
     char s[32];
@@ -254,14 +304,23 @@ void init_chessboard() {
 
     /* 根据各种功能给其他组件添加事件 */
     g_signal_handlers_destroy(disui_main_panel);
+
+    static gulong window_leave_handle;
+    static bool last_disbox_no_outside = false;
+    /* 需要功能就启用 */
     if (disbox_no_outside) {
-        g_signal_connect(
+        window_leave_handle = g_signal_connect(
             disui_window,
             "leave-notify-event",
             G_CALLBACK(out_window),
             NULL
         );
+    /* 不需要，如果上次启用了就取消功能 */
+    } else if (last_disbox_no_outside) {
+        g_signal_handler_disconnect(disui_window, window_leave_handle);
     }
+    last_disbox_no_outside = disbox_no_outside;
+
     set_timer();
 }
 

@@ -169,6 +169,7 @@ GtkWidget *create_menubar() {
 #include <gtk/gtkmessagedialog.h>
 
 static void show_rule() {
+    game_halt();
     GtkWidget *dialog = gtk_message_dialog_new(
         GTK_WINDOW(disui_window),
         GTK_DIALOG_MODAL,
@@ -178,11 +179,14 @@ static void show_rule() {
         "当所有方格的颜色都是白色时，游戏结束。"
     );
     gtk_widget_show_all(dialog);	/* 显示对话框和所有控件 */
+    g_signal_connect(dialog, "destroy",
+        G_CALLBACK(game_unhalt), NULL);
 }
 
 #include <gtk/gtkaboutdialog.h>
 
 static void show_license() {
+    game_halt();
     GtkWidget *dialog = gtk_about_dialog_new();
     
     static const gchar *authors[3] = {
@@ -218,4 +222,6 @@ static void show_license() {
     gtk_about_dialog_set_license(GTK_ABOUT_DIALOG(dialog), dislice);
 
     gtk_widget_show_all(dialog);	/* 显示对话框和所有控件 */
+    g_signal_connect(dialog, "destroy",
+        G_CALLBACK(game_unhalt), NULL);
 }
