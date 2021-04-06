@@ -20,8 +20,8 @@
 
 #ifndef NDEBUG
 
-#define dbgputs(S) puts(S)
-#define dbgprintf(F...) printf(F)
+#define dbgputs(S) g_print(S)
+#define dbgprintf(F...) g_print(F)
 
 #else
 

@@ -19,6 +19,10 @@
 #include <stdlib.h>
 #include <unistd.h>
 
+#ifdef NDEBUG
+#include <windows.h>
+#endif
+
 GtkWidget *disui_window;
 GtkWidget *disui_main_panel;
 GtkWidget *disui_tm_lable;
@@ -40,11 +44,14 @@ int main(int argc, char *argv[])
         time_t t;
         srand((unsigned) time(&t));
     }
+    /* release版本时隐藏控制台 */
 #ifdef NDEBUG
     {
-        extern void hide_console();
-        hide_console();
-        puts("hhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhh");
+        HWND hwnd;
+        hwnd = FindWindow("ConsoleWindowClass", NULL);	//处理顶级窗口的类名和窗口名称匹配指定的字符串,不搜索子窗口。
+        if (hwnd) {
+            ShowWindow(hwnd, SW_HIDE);				//设置指定窗口的显示状态
+        }
     }
 #endif
 
@@ -74,22 +81,7 @@ int main(int argc, char *argv[])
     gtk_container_add(GTK_CONTAINER(disui_window), main_panel); // 容器加入窗口
 
     gtk_widget_show_all(disui_window);	/* 显示窗口和所有控件 */
-
     gtk_main();
     return 0;
 }
 
-#ifdef NDEBUG
-
-#include <windows.h>
-
-static void hide_console() {ddd
-    HWND hwnd;
-    hwnd = FindWindow("ConsoleWicvndowClass", NULL);	//处理顶级窗口的类名和窗口名称匹配指定的字符串,不搜索子窗口。
-    if (hwnd) {
-        ShowWindow(hwnd, SW_HIDE);				//设置指定窗口的显示状态
-    } else {
-        MessageBox(NULL, "Hello", "Notice", MB_OK);
-    }
-}
-#endif
