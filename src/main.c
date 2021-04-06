@@ -39,11 +39,6 @@ static void menubar_size_allocate(GtkWidget *box,
 
 int main(int argc, char *argv[])
 {
-    /* 初始化随机数发生器 */
-    {
-        time_t t;
-        srand((unsigned) time(&t));
-    }
     /* release版本时隐藏控制台 */
 #ifdef NDEBUG
     {
@@ -54,6 +49,11 @@ int main(int argc, char *argv[])
         }
     }
 #endif
+    /* 初始化随机数发生器 */
+    {
+        time_t t;
+        srand((unsigned) time(&t));
+    }
 
     gtk_init(&argc, &argv);
 

@@ -21,7 +21,7 @@ OBJS := $(patsubst %.c,%.o,$(OBJS))
 
 INCLUDE = include
 
-CFLAGS-CONFIG = `pkg-config --cflags gtk+-2.0` $(CFLAG)
+CFLAGS-CONFIG := `pkg-config --cflags gtk+-2.0` $(CFLAG)
 LIBS-CONFIG = `pkg-config --libs gtk+-2.0`
 HEADER_RELY = include/dbx/*.h
 
@@ -46,7 +46,7 @@ run : disbox.exe
 	./disbox
 
 .PHONY : release
-release : LIBPATH = $(shell expr substr $(shell pkg-config --libs-only-L gtk+-2.0) 3 250)
+release : LIBPATH := $(shell expr substr $(shell pkg-config --libs-only-L gtk+-2.0) 3 250)
 release : clean
 	"$(MAKE)" disbox.exe CFLAG:="-DNDEBUG=1"
 # 事先准备好目录
@@ -66,7 +66,6 @@ release : clean
 	cp $(LIBPATH)/../bin/*.dll release
 	cp -r $(LIBPATH)/gtk-* release/lib/
 	cp -r $(LIBPATH)/../etc release
-	cp -r $(LIBPATH)/../share/themes release/share
 	cp -r $(LIBPATH)/../share/locale release/share
 # 本程序的文件拷贝过去
 	cp disbox.exe release
